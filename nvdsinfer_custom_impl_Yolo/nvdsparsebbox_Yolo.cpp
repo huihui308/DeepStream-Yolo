@@ -28,7 +28,7 @@
 #include "utils.h"
 
 extern "C" bool
-NvDsInferParseYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
+NvDsInferParseV1(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList);
 
 extern "C" bool
@@ -157,6 +157,51 @@ NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo
 }
 
 static bool
+NvDsInferParseCustomYoloV10(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
+    NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
+{
+  if (outputLayersInfo.empty()) {
+    std::cerr << "ERROR: Could not find output layer in bbox parsing" << std::endl;
+    return false;
+  }
+
+  std::vector<NvDsInferParseObjectInfo> objects;
+
+  const NvDsInferLayerInfo& boxes = outputLayersInfo[0];
+  //const NvDsInferLayerInfo& scores = outputLayersInfo[1];
+  //const NvDsInferLayerInfo& classes = outputLayersInfo[2];
+  const uint outputSize = boxes.inferDims.d[0];
+  float *result = (float*)(boxes.buffer);
+
+  // Process each detection result from the output
+  for (uint i = 0; i < outputSize; i++) {
+    // Compute the starting index for the current detection result in the 'result' array
+    int s = 6 * i;
+    int maxIndex = (int)result[s + 5];
+    float maxProb = (float)result[s + 4];
+
+    if (maxProb < detectionParams.perClassPreclusterThreshold[maxIndex]) {
+      continue;
+    }
+#if 0
+    if ((8 == maxIndex) || (9 == maxIndex) || (10 == maxIndex)) {
+      continue;
+    }
+#endif
+    // Extract the coordinates and dimensions of the bounding box (normalized values)
+    float cx = result[s + 0];  // Top-left x-coordinate
+    float cy = result[s + 1];  // Top-left y-coordinate
+    float dx = result[s + 2];  // Bottom-right x-coordinate
+    float dy = result[s + 3];  // Bottom-right y-coordinate
+
+    addBBoxProposal(cx, cy, dx, dy, networkInfo.width, networkInfo.height, maxIndex, maxProb, objects);
+  }
+  objectList = objects;
+
+  return true;
+}
+
+static bool
 NvDsInferParseCustomYoloE(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
 {
@@ -185,7 +230,7 @@ NvDsInferParseCustomYoloE(std::vector<NvDsInferLayerInfo> const& outputLayersInf
 }
 
 extern "C" bool
-NvDsInferParseYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
+NvDsInferParseV1(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
 {
   return NvDsInferParseCustomYolo(outputLayersInfo, networkInfo, detectionParams, objectList);
@@ -198,5 +243,13 @@ NvDsInferParseYoloE(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvD
   return NvDsInferParseCustomYoloE(outputLayersInfo, networkInfo, detectionParams, objectList);
 }
 
-CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseYolo);
+extern "C" bool
+NvDsInferParseV2(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
+    NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
+{
+  return NvDsInferParseCustomYoloV10(outputLayersInfo, networkInfo, detectionParams, objectList);
+}
+
+CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseV1);
 CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseYoloE);
+CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseV2);

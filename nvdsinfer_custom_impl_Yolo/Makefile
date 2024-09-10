@@ -21,6 +21,7 @@
 #
 # Edited by Marcos Luciano
 # https://www.github.com/marcoslucianops
+# CUDA_VER=11.4 make clean;CUDA_VER=11.4 make -j10;CUDA_VER=11.4 make install
 ################################################################################
 
 CUDA_VER?=
@@ -38,11 +39,15 @@ ifeq ($(GRAPH),)
 	GRAPH=0
 endif
 
+NVDS_VERSION:=6.2
+
 CC:= g++
 NVCC:=/usr/local/cuda-$(CUDA_VER)/bin/nvcc
 
 CFLAGS:= -Wall -std=c++11 -shared -fPIC -Wno-error=deprecated-declarations
 CFLAGS+= -I/opt/nvidia/deepstream/deepstream/sources/includes -I/usr/local/cuda-$(CUDA_VER)/include
+
+LIB_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/
 
 ifeq ($(OPENCV), 1)
 	COMMON+= -DOPENCV
@@ -70,7 +75,7 @@ endif
 SRCFILES+= $(wildcard layers/*.cpp)
 SRCFILES+= $(wildcard *.cu)
 
-TARGET_LIB:= libnvdsinfer_custom_impl_Yolo.so
+TARGET_LIB:= libnvdsinfer_custom_impl_Yolo_traffic_parti.so
 
 TARGET_OBJS:= $(SRCFILES:.cpp=.o)
 TARGET_OBJS:= $(TARGET_OBJS:.cu=.o)
@@ -85,6 +90,9 @@ all: $(TARGET_LIB)
 
 $(TARGET_LIB) : $(TARGET_OBJS)
 	$(CC) -o $@  $(TARGET_OBJS) $(LFLAGS)
+
+install: $(TARGET_LIB)
+	cp -rv $(TARGET_LIB) $(LIB_INSTALL_DIR)
 
 clean:
 	rm -rf $(TARGET_LIB)
