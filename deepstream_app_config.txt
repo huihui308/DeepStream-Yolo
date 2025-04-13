@@ -14,17 +14,34 @@ nvbuf-memory-type=0
 [source0]
 enable=1
 type=3
-uri=file:///opt/nvidia/deepstream/deepstream/samples/streams/sample_1080p_h264.mp4
+#uri=file:///opt/nvidia/deepstream/deepstream/samples/streams/sample_1080p_h264.mp4
+uri=file:///home/mic-730ai/david/code/DeepStream-Yolo/beer.mp4
 num-sources=1
 gpu-id=0
 cudadec-memtype=0
 
 [sink0]
-enable=1
-type=2
-sync=0
-gpu-id=0
-nvbuf-memory-type=0
+#enable=1
+#type=3
+#sync=0
+#gpu-id=0
+#nvbuf-memory-type=0
+#output-file=output.mp4
+
+enable = 1
+type = 3
+qos = 0
+container = 1
+codec = 1
+enc-type = 0
+sync = 0
+bitrate = 5000000
+profile = 0
+output-file = src1_sink.mp4
+#source-id = 1
+nvbuf-memory-type = 0
+width = 1280
+height = 720
 
 [osd]
 enable=1
@@ -56,7 +73,7 @@ enable=1
 gpu-id=0
 gie-unique-id=1
 nvbuf-memory-type=0
-config-file=config_infer_primary.txt
+config-file=config_infer_primary_yoloV11.txt
 
 [tests]
 file-loop=0
